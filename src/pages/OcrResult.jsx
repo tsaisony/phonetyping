@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Tesseract from 'tesseract.js';
 import { Loader2, Edit3, CheckCircle } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
+import { getCurrentUser, savePracticeSet } from '../lib/storage';
 
 export default function OcrResult() {
   const location = useLocation();
@@ -43,9 +45,28 @@ export default function OcrResult() {
   }, [image, navigate]);
 
   const handleSave = () => {
-    // In real app: split text, generate words, save to DB, navigate to practice
-    alert('已儲存！已為您建立練習題。');
-    navigate('/practice/mock-1');
+    // 未來這裡可以接 AI API 分析 OCR 原始文字，現在我們直接給予測試用的假資料單字
+    const newId = uuidv4();
+    const dateStr = new Date().toISOString().split('T')[0];
+    const username = getCurrentUser();
+    
+    const newPractice = {
+      id: newId,
+      date: dateStr,
+      title: `${dateStr} 的拍照練習`,
+      wordsCount: 3,
+      rawOcrText: text, // 將原始辨識的文字存起來，未來備用
+      questions: [
+        { word: '確認', kana: 'かくにん', meaning: '確認, confirm' },
+        { word: '練習', kana: 'れんしゅう', meaning: '練習, practice' },
+        { word: '写真', kana: 'しゃしん', meaning: '照片, photo' }
+      ]
+    };
+
+    savePracticeSet(username, newPractice);
+    
+    alert('已儲存至您的練習本！');
+    navigate(`/practice/${newId}`);
   };
 
   return (
