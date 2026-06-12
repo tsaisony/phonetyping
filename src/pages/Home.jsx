@@ -62,22 +62,24 @@ export default function Home() {
           </div>
         ) : (
           history.map(item => (
-            <div key={item.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+            <div key={item.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '0.75rem', textAlign: 'left' }}>
               <div>
-                <h4 style={{ margin: 0 }}>{item.title}</h4>
-                <p style={{ fontSize: '0.875rem', margin: '0.25rem 0 0 0' }}>
+                <h4 style={{ margin: 0, fontSize: '1.125rem' }}>{item.title}</h4>
+                <p style={{ fontSize: '0.875rem', margin: '0.25rem 0 0 0', color: 'var(--text-muted)' }}>
                   {item.date} · {item.wordsCount} 個單字
                 </p>
               </div>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <Link to={`/practice/${item.id}`} className="btn btn-secondary" style={{ padding: '0.5rem' }}>
-                  練習
+              <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+                <Link to={`/practice/${item.id}`} className="btn btn-primary" style={{ flex: 1, padding: '0.5rem', display: 'flex', justifyContent: 'center' }}>
+                  開始練習
                 </Link>
-                <button className="btn btn-secondary" style={{ padding: '0.5rem', color: 'var(--text-muted)' }} onClick={() => alert('複製分享連結！(待實作)')}>
-                  <Share2 size={18} />
-                </button>
-                <button className="btn btn-secondary" style={{ padding: '0.5rem', color: '#ef4444', borderColor: '#fee2e2', backgroundColor: '#fef2f2' }} onClick={() => handleDelete(item.id)}>
-                  <Trash2 size={18} />
+                <button 
+                  className="btn btn-secondary" 
+                  style={{ padding: '0.5rem 1rem', color: '#ef4444', borderColor: '#fee2e2', backgroundColor: '#fef2f2', display: 'flex', alignItems: 'center' }} 
+                  onClick={() => handleDelete(item.id)}
+                >
+                  <Trash2 size={18} style={{ marginRight: '0.25rem' }} />
+                  刪除
                 </button>
               </div>
             </div>
