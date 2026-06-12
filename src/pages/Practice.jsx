@@ -22,8 +22,8 @@ export default function Practice() {
   const [errorAnimation, setErrorAnimation] = useState(false);
 
   const currentQ = questions[currentIndex];
-  // Convert kana to romaji
-  const targetRomaji = currentQ ? wanakana.toRomaji(currentQ.kana) : '';
+  // 目標改為平假名 (Kana)
+  const targetKana = currentQ ? currentQ.kana : '';
 
   useEffect(() => {
     if (inputRef.current && !isFinished) {
@@ -38,14 +38,23 @@ export default function Practice() {
   };
 
   const handleChange = (e) => {
-    // 取得輸入值並轉換為小寫，僅允許英文字母
-    const val = e.target.value.toLowerCase().replace(/[^a-z-]/g, '');
+    // 取得輸入值，如果是用日文鍵盤 (九宮格/Flick)，輸入的會直接是平假名
+    // 若是用羅馬拼音輸入法，wanakana 會盡量將其轉換為平假名
+    const rawVal = e.target.value;
+    const val = wanakana.toHiragana(rawVal, { IMEMode: true });
     
-    if (targetRomaji.startsWith(val)) {
+    // 如果目前輸入的字串 (val) 是目標平假名 (targetKana) 的前綴
+    // 例如：目標是「かくにん」，輸入「か」或「かく」都會符合
+    // 注意：如果是羅馬拼音輸入法還在拼寫狀態 (例如 'k')，wanakana 轉換後仍是 'k'
+    // 為了相容，我們同時檢查是否符合羅馬拼音的前綴
+    const targetRomaji = wanakana.toRomaji(targetKana);
+    const valRomaji = wanakana.toRomaji(val);
+
+    if (targetKana.startsWith(val) || targetRomaji.startsWith(valRomaji)) {
       setTypedText(val);
       
       // 單字完成
-      if (val === targetRomaji) {
+      if (val === targetKana || valRomaji === targetRomaji) {
         setTimeout(() => {
           if (currentIndex < questions.length - 1) {
             setCurrentIndex(curr => curr + 1);
@@ -53,7 +62,7 @@ export default function Practice() {
           } else {
             setIsFinished(true);
           }
-        }, 200); // 短暫延遲讓使用者看到打完的綠字
+        }, 200); 
       }
     } else {
       // 打錯字
@@ -77,8 +86,10 @@ export default function Practice() {
     );
   }
 
-  const typedPart = targetRomaji.substring(0, typedText.length);
-  const untypedPart = targetRomaji.substring(typedText.length);
+  const typedPartKana = targetKana.substring(0, typedText.length);
+  const untypedPartKana = targetKana.substring(typedText.length);
+  // 在下方保留小小的羅馬拼音提示，以防萬一
+  const romajiHint = wanakana.toRomaji(targetKana);
 
   return (
     <div className="animate-fade-in" onClick={handleContainerClick} style={{ minHeight: '80vh', cursor: 'text' }}>
@@ -123,16 +134,21 @@ export default function Practice() {
         />
 
         <p style={{ fontSize: '1.25rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>{currentQ.meaning}</p>
-        <h1 style={{ fontSize: '3.5rem', margin: '0 0 0.5rem 0', fontWeight: 600 }}>{currentQ.word}</h1>
-        <p style={{ fontSize: '1.5rem', color: 'var(--primary)', marginBottom: '2.5rem', fontWeight: 500 }}>{currentQ.kana}</p>
+        <h1 style={{ fontSize: '3.5rem', margin: '0 0 1rem 0', fontWeight: 600 }}>{currentQ.word}</h1>
         
-        <div style={{ fontSize: '2.5rem', fontFamily: 'monospace', letterSpacing: '0.1em', display: 'flex' }}>
-          <span style={{ color: '#10b981', fontWeight: 'bold' }}>{typedPart}</span>
-          <span style={{ color: 'var(--border)' }}>{untypedPart}</span>
+        {/* 主要改為顯示平假名打字進度 */}
+        <div style={{ fontSize: '3rem', letterSpacing: '0.1em', display: 'flex', marginBottom: '1rem', fontWeight: 500 }}>
+          <span style={{ color: '#10b981' }}>{typedPartKana}</span>
+          <span style={{ color: 'var(--border)' }}>{untypedPartKana}</span>
         </div>
+
+        {/* 下方保留小字體的羅馬拼音輔助 */}
+        <p style={{ fontSize: '1.25rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+          {romajiHint}
+        </p>
         
         <div style={{ position: 'absolute', bottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-          <Keyboard size={16} /> 點擊此卡片並開始打字
+          <Keyboard size={16} /> 支援日文鍵盤 (九宮格/Flick) 或羅馬拼音輸入
         </div>
       </div>
     </div>
