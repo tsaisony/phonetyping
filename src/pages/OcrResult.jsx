@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import Tesseract from 'tesseract.js';
 import { Loader2, CheckCircle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { getCurrentUser, savePracticeSet } from '../lib/storage';
