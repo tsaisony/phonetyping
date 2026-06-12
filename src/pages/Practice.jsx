@@ -156,9 +156,9 @@ export default function Practice() {
   const getDynamicFontSize = (text) => {
     if (!text) return '3.5rem';
     const len = text.length;
-    if (len >= 12) return 'clamp(1.25rem, 4vw, 1.75rem)';
-    if (len >= 8) return 'clamp(1.5rem, 5vw, 2.25rem)';
-    if (len >= 5) return 'clamp(1.75rem, 6vw, 2.75rem)';
+    if (len >= 12) return 'clamp(1rem, 5vw, 1.5rem)';
+    if (len >= 9) return 'clamp(1.25rem, 6vw, 1.75rem)';
+    if (len >= 6) return 'clamp(1.5rem, 7vw, 2.25rem)';
     return 'clamp(2rem, 8vw, 3.5rem)';
   };
 
@@ -209,10 +209,13 @@ export default function Practice() {
             textAlign: 'center', 
             height: '60px', 
             marginBottom: '1rem',
-            pointerEvents: 'none'
+            pointerEvents: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
         >
-          <div style={{ fontSize: '2.5rem', letterSpacing: '0.1em', display: 'flex', justifyContent: 'center', fontWeight: 500 }}>
+          <div style={{ fontSize: getDynamicFontSize(targetKana), letterSpacing: '0.1em', display: 'flex', justifyContent: 'center', fontWeight: 500, transition: 'font-size 0.2s' }}>
             {showHint && <span style={{ color: 'var(--text-muted)' }}>{targetKana}</span>}
           </div>
         </div>
@@ -228,7 +231,8 @@ export default function Practice() {
           onCompositionEnd={handleCompositionEnd}
           className="input"
           style={{ 
-            fontSize: '2.5rem', 
+            fontSize: getDynamicFontSize(targetKana), 
+            transition: 'font-size 0.2s',
             textAlign: 'center', 
             padding: '1rem 1.5rem', 
             width: '90%', 
