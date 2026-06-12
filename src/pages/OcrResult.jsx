@@ -49,12 +49,13 @@ export default function OcrResult() {
           body: JSON.stringify({
             contents: [{
               parts: [
-                { text: "Extract all Japanese vocabulary from this image. Output ONLY a valid JSON array of objects without any markdown formatting. Each object must have exactly these keys: 'word' (the kanji/word, or '-' if none), 'kana' (hiragana), and 'meaning' (traditional chinese meaning)." },
+                { text: "Extract EVERY SINGLE Japanese vocabulary word or phrase from this image. DO NOT miss any words. DO NOT omit anything. DO NOT summarize. Output the COMPLETE list of ALL extracted words as ONLY a valid JSON array of objects without any markdown formatting. Each object must have exactly these keys: 'word' (the kanji/word, or '-' if none), 'kana' (hiragana), and 'meaning' (traditional chinese meaning)." },
                 { inline_data: { mime_type: mimeType, data: base64Data } }
               ]
             }],
             generationConfig: {
-              responseMimeType: "application/json"
+              responseMimeType: "application/json",
+              maxOutputTokens: 8192
             }
           })
         });
