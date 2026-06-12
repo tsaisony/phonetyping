@@ -101,8 +101,13 @@ export default function Practice() {
     // 將輸入的字串全部轉為羅馬拼音，以解決半形英文與平假名混合時的比對問題
     const rawRomaji = wanakana.toRomaji(rawValLower);
     
+    // 寬鬆比對：忽略長音符號與空白，讓使用者打字更順暢
+    const stripLongVowels = (str) => str.replace(/[ー\-—―－_~〜\s]/g, '');
+    const cleanTargetKana = stripLongVowels(targetKana);
+    const cleanValKana = stripLongVowels(valKana);
+    
     // 檢查是否符合平假名前綴 (日文鍵盤輸入)
-    const isKanaPrefix = targetKana.startsWith(valKana);
+    const isKanaPrefix = cleanTargetKana.startsWith(cleanValKana);
     // 檢查是否符合任何一種羅馬拼音變體的前綴 (英文鍵盤輸入)
     const isRomajiPrefix = romajiVariants.some(v => v.startsWith(rawRomaji));
 
@@ -137,8 +142,13 @@ export default function Practice() {
       const valKana = wanakana.toHiragana(typedText.trim(), { IMEMode: true });
       const rawRomaji = wanakana.toRomaji(typedText.trim());
       
+      // 寬鬆比對：忽略長音符號與空白
+      const stripLongVowels = (str) => str.replace(/[ー\-—―－_~〜\s]/g, '');
+      const cleanTargetKana = stripLongVowels(targetKana);
+      const cleanValKana = stripLongVowels(valKana);
+      
       // 只有在輸入完全正確時，按 Enter 才會跳到下一題
-      if (valKana === targetKana || romajiVariants.includes(rawRomaji)) {
+      if (cleanValKana === cleanTargetKana || romajiVariants.includes(rawRomaji)) {
         setTypedText(targetKana); // 確保顯示完美的平假名
         setTimeout(() => {
           if (currentIndex < questions.length - 1) {
