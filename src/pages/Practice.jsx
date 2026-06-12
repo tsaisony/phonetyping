@@ -182,8 +182,14 @@ export default function Practice() {
           .shake { animation: shake 0.3s ease-in-out; }
         `}</style>
         
-        <p style={{ fontSize: '1.25rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>{currentQ.meaning}</p>
-        <h1 style={{ fontSize: '3.5rem', margin: '0 0 1rem 0', fontWeight: 600 }}>{currentQ.word}</h1>
+        {wanakana.isKana(currentQ.word.replace(/[\s\-\~\.\,\!\?]/g, '')) ? (
+          <h1 style={{ fontSize: '3.5rem', margin: '0 0 1rem 0', fontWeight: 600 }}>{currentQ.meaning}</h1>
+        ) : (
+          <>
+            <p style={{ fontSize: '1.25rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>{currentQ.meaning}</p>
+            <h1 style={{ fontSize: '3.5rem', margin: '0 0 1rem 0', fontWeight: 600 }}>{currentQ.word}</h1>
+          </>
+        )}
         
         {/* 輸入錯誤三次後顯示提示 (固定高度避免版面跳動干擾輸入法) */}
         <div 
