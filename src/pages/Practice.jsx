@@ -74,7 +74,9 @@ export default function Practice() {
   const currentQ = questions[currentIndex];
   
   const targetKana = currentQ && currentQ.kana 
-    ? wanakana.toHiragana(currentQ.kana.trim().replace(/[-—―－_]/g, 'ー')) 
+    ? currentQ.kana.trim()
+        .replace(/[-—―－_]/g, 'ー')
+        .replace(/[\u30a1-\u30f6]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60))
     : '';
   const romajiVariants = currentQ ? generateRomajiVariants(targetKana) : [];
 
