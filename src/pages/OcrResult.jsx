@@ -19,17 +19,7 @@ export default function OcrResult() {
   const defaultTitle = `單字表 (${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()})`;
   const [title, setTitle] = useState(defaultTitle);
 
-  // 測試用的預設截圖資料
-  const initialQuestions = [
-    { id: 1, kana: 'おなか', word: '-', meaning: '肚子' },
-    { id: 2, kana: 'らくだ', word: '-', meaning: '駱駝' },
-    { id: 3, kana: 'リサイクル', word: '-', meaning: '資源回收' },
-    { id: 4, kana: 'リサイクルこうじょう', word: 'リサイクル工場', meaning: '資源回收工廠' },
-    { id: 5, kana: 'きっぷ', word: '切符', meaning: '票' },
-    { id: 6, kana: 'ていき', word: '定期', meaning: '定期、月票' }
-  ];
-  
-  const [questions, setQuestions] = useState(initialQuestions);
+  const [questions, setQuestions] = useState([]);
 
   useEffect(() => {
     if (!image) {
@@ -39,19 +29,70 @@ export default function OcrResult() {
 
     const recognizeText = async () => {
       try {
-        const worker = await Tesseract.createWorker('jpn', 1, {
-          logger: m => {
-            if (m.status === 'recognizing text') {
-              setProgress(parseInt(m.progress * 100));
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        if (!apiKey) {
+          throw new Error("Missing Gemini API Key in environment variables");
+        }
+
+        // image format: data:image/jpeg;base64,...
+        const mimeType = image.split(';')[0].split(':')[1];
+        const base64Data = image.split(',')[1];
+
+        // We use a progressive fake loader just for visual feedback since fetch doesn't give upload progress
+        const progressInterval = setInterval(() => {
+          setProgress(p => (p < 90 ? p + 10 : p));
+        }, 300);
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: "Extract all Japanese vocabulary from this image. Output ONLY a valid JSON array of objects without any markdown formatting. Each object must have exactly these keys: 'word' (the kanji/word, or '-' if none), 'kana' (hiragana), and 'meaning' (traditional chinese meaning)." },
+                { inline_data: { mime_type: mimeType, data: base64Data } }
+              ]
+            }],
+            generationConfig: {
+              responseMimeType: "application/json"
             }
-          }
+          })
         });
+
+        clearInterval(progressInterval);
+        setProgress(100);
+
+        const result = await response.json();
+        if (result.error) {
+          throw new Error(result.error.message);
+        }
+
+        const textData = result.candidates[0].content.parts[0].text;
         
-        const { data: { text } } = await worker.recognize(image);
-        setRawText(text.replace(/\s+/g, ''));
-        await worker.terminate();
+        let parsedData;
+        try {
+          parsedData = JSON.parse(textData);
+        } catch (e) {
+          // Fallback if markdown block is returned despite instructions
+          const cleanedText = textData.replace(/```json/g, '').replace(/```/g, '');
+          parsedData = JSON.parse(cleanedText);
+        }
+
+        // Give each item a unique ID
+        const mappedQuestions = parsedData.map((item, idx) => ({
+          id: uuidv4(),
+          kana: item.kana || '',
+          word: item.word || '-',
+          meaning: item.meaning || ''
+        }));
+
+        setQuestions(mappedQuestions);
+        setRawText("Processed by Gemini AI");
       } catch (err) {
-        console.error("OCR Error:", err);
+        console.error("Gemini AI Error:", err);
+        alert(`AI 分析失敗：${err.message}`);
+        // Fallback or empty state
+        setQuestions([]);
       } finally {
         setIsRecognizing(false);
       }
