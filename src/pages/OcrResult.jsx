@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Tesseract from 'tesseract.js';
-import { Loader2, Edit3, CheckCircle } from 'lucide-react';
+import { Loader2, CheckCircle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { getCurrentUser, savePracticeSet } from '../lib/storage';
 
@@ -10,9 +10,26 @@ export default function OcrResult() {
   const navigate = useNavigate();
   const image = location.state?.image;
   
-  const [text, setText] = useState('');
   const [isRecognizing, setIsRecognizing] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [rawText, setRawText] = useState('');
+
+  // 預設標題
+  const today = new Date();
+  const defaultTitle = `單字表 (${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()})`;
+  const [title, setTitle] = useState(defaultTitle);
+
+  // 測試用的預設截圖資料
+  const initialQuestions = [
+    { id: 1, kana: 'おなか', word: '-', meaning: '肚子' },
+    { id: 2, kana: 'らくだ', word: '-', meaning: '駱駝' },
+    { id: 3, kana: 'リサイクル', word: '-', meaning: '資源回收' },
+    { id: 4, kana: 'リサイクルこうじょう', word: 'リサイクル工場', meaning: '資源回收工廠' },
+    { id: 5, kana: 'きっぷ', word: '切符', meaning: '票' },
+    { id: 6, kana: 'ていき', word: '定期', meaning: '定期、月票' }
+  ];
+  
+  const [questions, setQuestions] = useState(initialQuestions);
 
   useEffect(() => {
     if (!image) {
@@ -31,11 +48,10 @@ export default function OcrResult() {
         });
         
         const { data: { text } } = await worker.recognize(image);
-        setText(text.replace(/\s+/g, '')); // Basic cleanup for Japanese
+        setRawText(text.replace(/\s+/g, ''));
         await worker.terminate();
       } catch (err) {
         console.error("OCR Error:", err);
-        setText('辨識失敗，請確認圖片清晰並重試。');
       } finally {
         setIsRecognizing(false);
       }
@@ -44,67 +60,142 @@ export default function OcrResult() {
     recognizeText();
   }, [image, navigate]);
 
+  const handleQuestionChange = (id, field, value) => {
+    setQuestions(prev => prev.map(q => 
+      q.id === id ? { ...q, [field]: value } : q
+    ));
+  };
+
   const handleSave = () => {
-    // 未來這裡可以接 AI API 分析 OCR 原始文字，現在我們直接給予測試用的假資料單字
     const newId = uuidv4();
     const dateStr = new Date().toISOString().split('T')[0];
     const username = getCurrentUser();
     
+    // 如果漢字欄位是 '-'，在打字畫面上就把假名當成主要單字顯示
+    const processedQuestions = questions.map(q => ({
+      ...q,
+      word: q.word === '-' ? q.kana : q.word
+    }));
+    
     const newPractice = {
       id: newId,
       date: dateStr,
-      title: `${dateStr} 的拍照練習`,
-      wordsCount: 3,
-      rawOcrText: text, // 將原始辨識的文字存起來，未來備用
-      questions: [
-        { word: '確認', kana: 'かくにん', meaning: '確認, confirm' },
-        { word: '練習', kana: 'れんしゅう', meaning: '練習, practice' },
-        { word: '写真', kana: 'しゃしん', meaning: '照片, photo' }
-      ]
+      title: title,
+      wordsCount: questions.length,
+      rawOcrText: rawText,
+      questions: processedQuestions
     };
 
     savePracticeSet(username, newPractice);
-    
-    alert('已儲存至您的練習本！');
     navigate(`/practice/${newId}`);
   };
 
+  if (isRecognizing) {
+    return (
+      <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <Loader2 size={48} color="var(--primary)" className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />
+        <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
+        <p style={{ marginTop: '2rem', fontSize: '1.25rem', fontWeight: 500 }}>正在解析圖片中的文字...</p>
+        <div style={{ width: '80%', maxWidth: '300px', backgroundColor: 'var(--border)', height: '8px', borderRadius: '4px', marginTop: '1rem' }}>
+          <div style={{ width: `${progress}%`, backgroundColor: 'var(--primary)', height: '100%', borderRadius: '4px', transition: 'width 0.2s' }}></div>
+        </div>
+        <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>{progress}%</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="animate-fade-in">
-      <h2>辨識結果</h2>
-      
-      {isRecognizing ? (
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '3rem 1rem' }}>
-          <Loader2 size={40} color="var(--primary)" className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />
-          <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
-          <p style={{ marginTop: '1rem', fontWeight: 500 }}>正在分析圖片...</p>
-          <div style={{ width: '100%', backgroundColor: 'var(--border)', height: '6px', borderRadius: '3px', marginTop: '1rem' }}>
-            <div style={{ width: `${progress}%`, backgroundColor: 'var(--primary)', height: '100%', borderRadius: '3px', transition: 'width 0.2s' }}></div>
+    <div className="animate-fade-in" style={{ paddingBottom: '2rem' }}>
+      <div style={{ marginBottom: '2rem' }}>
+        <label style={{ display: 'block', fontSize: '1.125rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-main)' }}>
+          為這份單字表命名：
+        </label>
+        <input 
+          type="text" 
+          value={title} 
+          onChange={(e) => setTitle(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '1rem',
+            fontSize: '1.25rem',
+            fontWeight: 600,
+            border: '1px solid var(--border)',
+            borderRadius: '0.75rem',
+            backgroundColor: 'var(--surface)',
+            color: 'var(--text-main)'
+          }}
+        />
+      </div>
+
+      <div>
+        <label style={{ display: 'block', fontSize: '1.125rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-main)' }}>
+          檢查提取結果 <span style={{ fontSize: '0.875rem', fontWeight: 400, color: 'var(--text-muted)' }}>(點擊表格修改)</span>
+        </label>
+        
+        <div style={{ 
+          backgroundColor: '#e2e8f0', // 類似截圖的外框背景色
+          borderRadius: '0.75rem',
+          overflow: 'hidden',
+          border: '1px solid var(--border)'
+        }}>
+          {/* 表格標題 */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: '30px 1fr 1fr 1fr', 
+            padding: '1rem 0.5rem',
+            fontWeight: 600,
+            color: '#475569',
+            fontSize: '0.875rem',
+            gap: '0.5rem'
+          }}>
+            <div style={{ textAlign: 'center' }}>#</div>
+            <div>假名</div>
+            <div>漢字</div>
+            <div>中文</div>
           </div>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>{progress}%</p>
-        </div>
-      ) : (
-        <div className="animate-fade-in">
-          <div className="card" style={{ marginBottom: '1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <span style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Edit3 size={18} color="var(--primary)" /> 編輯辨識文字
-              </span>
+
+          {/* 表格內容 */}
+          {questions.map((q, index) => (
+            <div key={q.id} style={{ 
+              display: 'grid', 
+              gridTemplateColumns: '30px 1fr 1fr 1fr', 
+              padding: '1rem 0.5rem',
+              borderTop: '1px solid #e2e8f0',
+              backgroundColor: 'var(--surface)',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>
+                {index + 1}
+              </div>
+              <input 
+                value={q.kana} 
+                onChange={(e) => handleQuestionChange(q.id, 'kana', e.target.value)}
+                style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '1rem', width: '100%', fontWeight: 600, color: 'var(--text-main)' }}
+              />
+              <input 
+                value={q.word} 
+                onChange={(e) => handleQuestionChange(q.id, 'word', e.target.value)}
+                style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '1rem', width: '100%', color: 'var(--text-main)' }}
+              />
+              <input 
+                value={q.meaning} 
+                onChange={(e) => handleQuestionChange(q.id, 'meaning', e.target.value)}
+                style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '1rem', width: '100%', color: 'var(--text-main)' }}
+              />
             </div>
-            <textarea 
-              className="input" 
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              style={{ minHeight: '150px', resize: 'vertical', fontSize: '1rem', lineHeight: '1.6' }}
-            />
-          </div>
-          
-          <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleSave}>
-            <CheckCircle size={18} />
-            確認並產生練習題
-          </button>
+          ))}
         </div>
-      )}
+      </div>
+      
+      <button 
+        className="btn btn-primary" 
+        style={{ width: '100%', marginTop: '2rem', padding: '1rem', fontSize: '1.125rem' }} 
+        onClick={handleSave}
+      >
+        <CheckCircle size={20} />
+        確認並開始練習
+      </button>
     </div>
   );
 }
