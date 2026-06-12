@@ -57,7 +57,7 @@ export default function Practice() {
   const questions = practiceSet.questions;
   const currentQ = questions[currentIndex];
   
-  const targetKana = currentQ ? currentQ.kana : '';
+  const targetKana = currentQ && currentQ.kana ? currentQ.kana.trim().replace(/[-—―－]/g, 'ー') : '';
   const romajiVariants = currentQ ? generateRomajiVariants(targetKana) : [];
 
   useEffect(() => {
@@ -114,8 +114,8 @@ export default function Practice() {
         return; // 這是輸入法選字的 Enter，不要觸發跳題
       }
       
-      const valKana = wanakana.toHiragana(typedText, { IMEMode: true });
-      const rawRomaji = wanakana.toRomaji(typedText);
+      const valKana = wanakana.toHiragana(typedText.trim(), { IMEMode: true });
+      const rawRomaji = wanakana.toRomaji(typedText.trim());
       
       // 只有在輸入完全正確時，按 Enter 才會跳到下一題
       if (valKana === targetKana || romajiVariants.includes(rawRomaji)) {
