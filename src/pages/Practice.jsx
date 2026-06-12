@@ -96,15 +96,18 @@ export default function Practice() {
     }
 
     const rawValLower = rawVal.toLowerCase();
-    // 將輸入的字串即時轉換為平假名 (IMEMode 支援完整音節瞬間轉換)
-    const valKana = wanakana.toHiragana(rawValLower, { IMEMode: true });
+    // 將輸入的字串即時轉換為平假名，並防止將英文減號強轉為片假名長音符號
+    const valKana = wanakana.toHiragana(rawValLower, { 
+      IMEMode: true,
+      customKanaMapping: { '-': '-' }
+    });
     // 將輸入的字串全部轉為羅馬拼音，以解決半形英文與平假名混合時的比對問題
     const rawRomaji = wanakana.toRomaji(rawValLower);
     
-    // 寬鬆比對：忽略長音符號與空白，讓使用者打字更順暢
-    const stripLongVowels = (str) => str.replace(/[ー\-—―－_~〜\s]/g, '');
-    const cleanTargetKana = stripLongVowels(targetKana);
-    const cleanValKana = stripLongVowels(valKana);
+    // 統一將所有形式的減號與長音符號視為相同 (比對專用)
+    const normalizeDash = (str) => str.replace(/[-—―－_~〜]/g, 'ー');
+    const cleanTargetKana = normalizeDash(targetKana);
+    const cleanValKana = normalizeDash(valKana);
     
     // 檢查是否符合平假名前綴 (日文鍵盤輸入)
     const isKanaPrefix = cleanTargetKana.startsWith(cleanValKana);
@@ -139,13 +142,16 @@ export default function Practice() {
         return; // 這是輸入法選字的 Enter，不要觸發跳題
       }
       
-      const valKana = wanakana.toHiragana(typedText.trim(), { IMEMode: true });
+      const valKana = wanakana.toHiragana(typedText.trim(), { 
+        IMEMode: true,
+        customKanaMapping: { '-': '-' }
+      });
       const rawRomaji = wanakana.toRomaji(typedText.trim());
       
-      // 寬鬆比對：忽略長音符號與空白
-      const stripLongVowels = (str) => str.replace(/[ー\-—―－_~〜\s]/g, '');
-      const cleanTargetKana = stripLongVowels(targetKana);
-      const cleanValKana = stripLongVowels(valKana);
+      // 統一將所有形式的減號與長音符號視為相同 (比對專用)
+      const normalizeDash = (str) => str.replace(/[-—―－_~〜]/g, 'ー');
+      const cleanTargetKana = normalizeDash(targetKana);
+      const cleanValKana = normalizeDash(valKana);
       
       // 只有在輸入完全正確時，按 Enter 才會跳到下一題
       if (cleanValKana === cleanTargetKana || romajiVariants.includes(rawRomaji)) {
