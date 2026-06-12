@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Camera, FileText, Share2, User } from 'lucide-react';
+import { Camera, FileText, Share2, User, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { getCurrentUser, setCurrentUser, getPracticeSets } from '../lib/storage';
+import { getCurrentUser, setCurrentUser, getPracticeSets, deletePracticeSet } from '../lib/storage';
 
 export default function Home() {
   const [username, setUsername] = useState(getCurrentUser());
@@ -15,6 +15,13 @@ export default function Home() {
     const newName = e.target.value;
     setUsername(newName);
     setCurrentUser(newName);
+  };
+
+  const handleDelete = (id) => {
+    if (window.confirm('確定要刪除這份單字表嗎？刪除後無法復原喔！')) {
+      deletePracticeSet(username, id);
+      setHistory(getPracticeSets(username));
+    }
   };
 
   return (
@@ -68,6 +75,9 @@ export default function Home() {
                 </Link>
                 <button className="btn btn-secondary" style={{ padding: '0.5rem', color: 'var(--text-muted)' }} onClick={() => alert('複製分享連結！(待實作)')}>
                   <Share2 size={18} />
+                </button>
+                <button className="btn btn-secondary" style={{ padding: '0.5rem', color: '#ef4444', borderColor: '#fee2e2', backgroundColor: '#fef2f2' }} onClick={() => handleDelete(item.id)}>
+                  <Trash2 size={18} />
                 </button>
               </div>
             </div>

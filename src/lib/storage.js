@@ -17,6 +17,12 @@ export const savePracticeSet = (username, set) => {
   localStorage.setItem(`practices_${username}`, JSON.stringify(existing));
 };
 
+export const deletePracticeSet = (username, id) => {
+  const existing = getPracticeSets(username);
+  const updated = existing.filter(s => s.id !== id);
+  localStorage.setItem(`practices_${username}`, JSON.stringify(updated));
+};
+
 export const getPracticeSetById = (username, id) => {
   const sets = getPracticeSets(username);
   return sets.find(s => s.id === id);

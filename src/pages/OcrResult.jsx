@@ -34,16 +34,29 @@ export default function OcrResult() {
           throw new Error("Missing Gemini API Key in environment variables");
         }
 
-        // image format: data:image/jpeg;base64,...
-        const mimeType = image.split(';')[0].split(':')[1];
-        const base64Data = image.split(',')[1];
+        let mimeType, base64Data;
+        if (image.startsWith('data:')) {
+          mimeType = image.split(';')[0].split(':')[1];
+          base64Data = image.split(',')[1];
+        } else {
+          // If it's a blob:http or http URL (happens with Vite HMR preserving old state)
+          const blobRes = await fetch(image);
+          const blob = await blobRes.blob();
+          mimeType = blob.type;
+          base64Data = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        }
 
         // We use a progressive fake loader just for visual feedback since fetch doesn't give upload progress
         const progressInterval = setInterval(() => {
           setProgress(p => (p < 90 ? p + 10 : p));
         }, 300);
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

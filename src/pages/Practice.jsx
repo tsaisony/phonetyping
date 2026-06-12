@@ -4,12 +4,35 @@ import { Check, Keyboard } from 'lucide-react';
 import * as wanakana from 'wanakana';
 import { getCurrentUser, getPracticeSetById } from '../lib/storage';
 
+// 產生多種羅馬拼音的變體 (如 chi 與 ti)
+const generateRomajiVariants = (kana) => {
+  const std = wanakana.toRomaji(kana);
+  const replacements = [
+    { from: 'chi', to: 'ti' }, { from: 'cha', to: 'tya' }, { from: 'chu', to: 'tyu' }, { from: 'cho', to: 'tyo' },
+    { from: 'shi', to: 'si' }, { from: 'sha', to: 'sya' }, { from: 'shu', to: 'syu' }, { from: 'sho', to: 'syo' },
+    { from: 'ji', to: 'zi' }, { from: 'ja', to: 'zya' }, { from: 'ju', to: 'zyu' }, { from: 'jo', to: 'zyo' },
+    { from: 'tsu', to: 'tu' }, { from: 'fu', to: 'hu' }
+  ];
+
+  let variants = [std];
+  replacements.forEach(r => {
+    const newVariants = [];
+    variants.forEach(v => {
+      if (v.includes(r.from)) {
+        newVariants.push(v.split(r.from).join(r.to));
+      }
+    });
+    variants = [...variants, ...newVariants];
+  });
+  return variants;
+};
+
 export default function Practice() {
   const { id } = useParams();
   const navigate = useNavigate();
   const inputRef = useRef(null);
+  const isComposing = useRef(false);
   
-  // 取得真實資料
   const username = getCurrentUser();
   const practiceSet = getPracticeSetById(username, id);
   
@@ -17,13 +40,14 @@ export default function Practice() {
   const [typedText, setTypedText] = useState('');
   const [isFinished, setIsFinished] = useState(false);
   const [errorAnimation, setErrorAnimation] = useState(false);
+  const [errorCount, setErrorCount] = useState(0);
 
-  // 如果找不到練習資料 (可能輸錯網址或清除了資料)
+  const showHint = errorCount >= 3;
+
   if (!practiceSet) {
     return (
       <div className="card animate-fade-in" style={{ textAlign: 'center', padding: '3rem 1rem', marginTop: '2rem' }}>
         <h2>找不到此練習紀錄</h2>
-        <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>可能是已經被刪除，或是屬於其他使用者的檔案。</p>
         <button className="btn btn-primary" onClick={() => navigate('/')}>回首頁</button>
       </div>
     );
@@ -32,8 +56,9 @@ export default function Practice() {
   const title = practiceSet.title;
   const questions = practiceSet.questions;
   const currentQ = questions[currentIndex];
-  // 目標改為平假名 (Kana)
+  
   const targetKana = currentQ ? currentQ.kana : '';
+  const romajiVariants = currentQ ? generateRomajiVariants(targetKana) : [];
 
   useEffect(() => {
     if (inputRef.current && !isFinished) {
@@ -41,35 +66,75 @@ export default function Practice() {
     }
   }, [currentIndex, isFinished]);
 
-  const handleContainerClick = () => {
-    if (inputRef.current) {
-      inputRef.current.focus();
+  const handleChange = (e) => {
+    const rawVal = e.target.value;
+
+    if (isComposing.current) {
+      // 正在使用輸入法 (IME) 組字中，不要干涉 DOM value，直接原封不動存起來
+      setTypedText(rawVal);
+      return;
+    }
+
+    const rawValLower = rawVal.toLowerCase();
+    // 將輸入的字串即時轉換為平假名 (IMEMode 支援完整音節瞬間轉換)
+    const valKana = wanakana.toHiragana(rawValLower, { IMEMode: true });
+    // 將輸入的字串全部轉為羅馬拼音，以解決半形英文與平假名混合時的比對問題
+    const rawRomaji = wanakana.toRomaji(rawValLower);
+    
+    // 檢查是否符合平假名前綴 (日文鍵盤輸入)
+    const isKanaPrefix = targetKana.startsWith(valKana);
+    // 檢查是否符合任何一種羅馬拼音變體的前綴 (英文鍵盤輸入)
+    const isRomajiPrefix = romajiVariants.some(v => v.startsWith(rawRomaji));
+
+    // 無條件允許使用者進行「刪除」操作 (避免打錯字後被卡死無法刪除)
+    const isDeletion = rawVal.length < typedText.length;
+
+    if (isKanaPrefix || isRomajiPrefix || isDeletion) {
+      // 若為刪除，保留原始輸入，避免轉換引擎干擾；若為新增，則轉換為平假名
+      setTypedText(isDeletion ? rawValLower : valKana);
+    } else {
+      setErrorAnimation(true);
+      setErrorCount(prev => prev + 1);
+      setTimeout(() => setErrorAnimation(false), 300);
     }
   };
 
-  const handleChange = (e) => {
-    const rawVal = e.target.value;
-    const val = wanakana.toHiragana(rawVal, { IMEMode: true });
-    
-    const targetRomaji = wanakana.toRomaji(targetKana);
-    const valRomaji = wanakana.toRomaji(val);
+  const handleCompositionStart = () => {
+    isComposing.current = true;
+  };
 
-    if (targetKana.startsWith(val) || targetRomaji.startsWith(valRomaji)) {
-      setTypedText(val);
+  const handleCompositionEnd = (e) => {
+    isComposing.current = false;
+    handleChange(e); // 組字完成後，立刻手動觸發一次驗證
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      if (e.nativeEvent.isComposing || isComposing.current) {
+        return; // 這是輸入法選字的 Enter，不要觸發跳題
+      }
       
-      if (val === targetKana || valRomaji === targetRomaji) {
+      const valKana = wanakana.toHiragana(typedText, { IMEMode: true });
+      const rawRomaji = wanakana.toRomaji(typedText);
+      
+      // 只有在輸入完全正確時，按 Enter 才會跳到下一題
+      if (valKana === targetKana || romajiVariants.includes(rawRomaji)) {
+        setTypedText(targetKana); // 確保顯示完美的平假名
         setTimeout(() => {
           if (currentIndex < questions.length - 1) {
             setCurrentIndex(curr => curr + 1);
             setTypedText('');
+            setErrorCount(0);
           } else {
             setIsFinished(true);
           }
-        }, 200); 
+        }, 50); // 給一點極短的延遲讓畫面更新
+      } else {
+        // 如果還沒打完就按 Enter，就震動提示並增加錯誤次數
+        setErrorAnimation(true);
+        setErrorCount(prev => prev + 1);
+        setTimeout(() => setErrorAnimation(false), 300);
       }
-    } else {
-      setErrorAnimation(true);
-      setTimeout(() => setErrorAnimation(false), 300);
     }
   };
 
@@ -80,7 +145,6 @@ export default function Practice() {
           <Check size={32} color="white" />
         </div>
         <h2>完成打字練習！</h2>
-        <p>太棒了，您的羅馬拼音與日文輸入非常準確。</p>
         <button className="btn btn-primary" style={{ marginTop: '2rem' }} onClick={() => navigate('/')}>
           回首頁
         </button>
@@ -88,12 +152,8 @@ export default function Practice() {
     );
   }
 
-  const typedPartKana = targetKana.substring(0, typedText.length);
-  const untypedPartKana = targetKana.substring(typedText.length);
-  const romajiHint = wanakana.toRomaji(targetKana);
-
   return (
-    <div className="animate-fade-in" onClick={handleContainerClick} style={{ minHeight: '80vh', cursor: 'text' }}>
+    <div className="animate-fade-in" onClick={() => inputRef.current?.focus()} style={{ minHeight: '80vh', cursor: 'text' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h2 style={{ margin: 0, fontSize: '1.25rem' }}>{title}</h2>
         <span style={{ color: 'var(--text-muted)' }}>{currentIndex + 1} / {questions.length}</span>
@@ -125,38 +185,48 @@ export default function Practice() {
         <p style={{ fontSize: '1.25rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>{currentQ.meaning}</p>
         <h1 style={{ fontSize: '3.5rem', margin: '0 0 1rem 0', fontWeight: 600 }}>{currentQ.word}</h1>
         
-        {/* 顯示目標平假名 */}
-        <div style={{ fontSize: '2.5rem', letterSpacing: '0.1em', display: 'flex', marginBottom: '1rem', fontWeight: 500 }}>
-          <span style={{ color: 'var(--text-muted)' }}>{targetKana}</span>
+        {/* 輸入錯誤三次後顯示提示 (固定高度避免版面跳動干擾輸入法) */}
+        <div 
+          style={{ 
+            opacity: showHint ? 1 : 0, 
+            transition: 'opacity 0.3s ease-in-out',
+            textAlign: 'center', 
+            height: '60px', 
+            marginBottom: '1rem',
+            pointerEvents: 'none'
+          }}
+        >
+          <div style={{ fontSize: '2.5rem', letterSpacing: '0.1em', display: 'flex', justifyContent: 'center', fontWeight: 500 }}>
+            {showHint && <span style={{ color: 'var(--text-muted)' }}>{targetKana}</span>}
+          </div>
         </div>
 
-        {/* 下方保留小字體的羅馬拼音輔助 */}
-        <p style={{ fontSize: '1.25rem', color: 'var(--text-muted)', fontFamily: 'monospace', marginBottom: '2rem' }}>
-          {romajiHint}
-        </p>
-
-        {/* 實體可見的輸入框，讓游標閃爍 */}
+        {/* 實體可見的輸入框 */}
         <input 
           ref={inputRef}
           type="text"
           value={typedText}
           onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onCompositionStart={handleCompositionStart}
+          onCompositionEnd={handleCompositionEnd}
           className="input"
           style={{ 
             fontSize: '2.5rem', 
             textAlign: 'center', 
-            padding: '1rem', 
+            padding: '1rem 1.5rem', 
             width: '90%', 
-            maxWidth: '350px',
+            maxWidth: '600px',
             borderRadius: '1rem',
             border: '2px solid var(--primary)',
-            color: '#10b981', // 綠色字體代表正確輸入
+            color: '#10b981', 
             fontWeight: 'bold',
             letterSpacing: '0.1em',
             boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.2)'
           }}
           placeholder="點擊此處輸入..."
-          autoComplete="off"
+          autoComplete="new-password"
+          name="practice_input"
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck="false"
