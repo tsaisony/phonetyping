@@ -122,31 +122,47 @@ export default function Practice() {
           .shake { animation: shake 0.3s ease-in-out; }
         `}</style>
         
+        <p style={{ fontSize: '1.25rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>{currentQ.meaning}</p>
+        <h1 style={{ fontSize: '3.5rem', margin: '0 0 1rem 0', fontWeight: 600 }}>{currentQ.word}</h1>
+        
+        {/* 顯示目標平假名 */}
+        <div style={{ fontSize: '2.5rem', letterSpacing: '0.1em', display: 'flex', marginBottom: '1rem', fontWeight: 500 }}>
+          <span style={{ color: 'var(--text-muted)' }}>{targetKana}</span>
+        </div>
+
+        {/* 下方保留小字體的羅馬拼音輔助 */}
+        <p style={{ fontSize: '1.25rem', color: 'var(--text-muted)', fontFamily: 'monospace', marginBottom: '2rem' }}>
+          {romajiHint}
+        </p>
+
+        {/* 實體可見的輸入框，讓游標閃爍 */}
         <input 
           ref={inputRef}
           type="text"
           value={typedText}
           onChange={handleChange}
-          style={{ opacity: 0, position: 'absolute', top: 0, left: 0, height: '100%', width: '100%', zIndex: -1 }}
+          className="input"
+          style={{ 
+            fontSize: '2.5rem', 
+            textAlign: 'center', 
+            padding: '1rem', 
+            width: '90%', 
+            maxWidth: '350px',
+            borderRadius: '1rem',
+            border: '2px solid var(--primary)',
+            color: '#10b981', // 綠色字體代表正確輸入
+            fontWeight: 'bold',
+            letterSpacing: '0.1em',
+            boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.2)'
+          }}
+          placeholder="點擊此處輸入..."
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck="false"
         />
-
-        <p style={{ fontSize: '1.25rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>{currentQ.meaning}</p>
-        <h1 style={{ fontSize: '3.5rem', margin: '0 0 1rem 0', fontWeight: 600 }}>{currentQ.word}</h1>
         
-        <div style={{ fontSize: '3rem', letterSpacing: '0.1em', display: 'flex', marginBottom: '1rem', fontWeight: 500 }}>
-          <span style={{ color: '#10b981' }}>{typedPartKana}</span>
-          <span style={{ color: 'var(--border)' }}>{untypedPartKana}</span>
-        </div>
-
-        <p style={{ fontSize: '1.25rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-          {romajiHint}
-        </p>
-        
-        <div style={{ position: 'absolute', bottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+        <div style={{ marginTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
           <Keyboard size={16} /> 支援日文鍵盤 (九宮格/Flick) 或羅馬拼音輸入
         </div>
       </div>
