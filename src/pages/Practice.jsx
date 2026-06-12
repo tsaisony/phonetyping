@@ -15,6 +15,22 @@ const generateRomajiVariants = (kana) => {
   ];
 
   let variants = [std];
+  
+  // 處理長音符號變體 (將 - 替換為重複母音)
+  if (std.includes('-')) {
+    const longVowelVariant = std.replace(/([aeiou])-/g, '$1$1');
+    if (longVowelVariant !== std) {
+      variants.push(longVowelVariant);
+    }
+    // 特別處理 o- 可以拼作 ou 的情況
+    if (std.includes('o-')) {
+      const ouVariant = std.replace(/o-/g, 'ou');
+      if (ouVariant !== std && ouVariant !== longVowelVariant) {
+        variants.push(ouVariant);
+      }
+    }
+  }
+
   replacements.forEach(r => {
     const newVariants = [];
     variants.forEach(v => {
