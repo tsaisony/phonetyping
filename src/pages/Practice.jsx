@@ -152,6 +152,16 @@ export default function Practice() {
     );
   }
 
+  // 動態計算字體大小，避免長單字破版
+  const getDynamicFontSize = (text) => {
+    if (!text) return '3.5rem';
+    const len = text.length;
+    if (len >= 12) return 'clamp(1.25rem, 4vw, 1.75rem)';
+    if (len >= 8) return 'clamp(1.5rem, 5vw, 2.25rem)';
+    if (len >= 5) return 'clamp(1.75rem, 6vw, 2.75rem)';
+    return 'clamp(2rem, 8vw, 3.5rem)';
+  };
+
   return (
     <div className="animate-fade-in" onClick={() => inputRef.current?.focus()} style={{ minHeight: '80vh', cursor: 'text' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -183,11 +193,11 @@ export default function Practice() {
         `}</style>
         
         {wanakana.isKana(currentQ.word.replace(/[\s\-\~\.\,\!\?]/g, '')) ? (
-          <h1 style={{ fontSize: '3.5rem', margin: '0 0 1rem 0', fontWeight: 600 }}>{currentQ.meaning}</h1>
+          <h1 style={{ fontSize: getDynamicFontSize(currentQ.meaning), margin: '0 0 1rem 0', fontWeight: 600, transition: 'font-size 0.2s' }}>{currentQ.meaning}</h1>
         ) : (
           <>
             <p style={{ fontSize: '1.25rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>{currentQ.meaning}</p>
-            <h1 style={{ fontSize: '3.5rem', margin: '0 0 1rem 0', fontWeight: 600 }}>{currentQ.word}</h1>
+            <h1 style={{ fontSize: getDynamicFontSize(currentQ.word), margin: '0 0 1rem 0', fontWeight: 600, transition: 'font-size 0.2s' }}>{currentQ.word}</h1>
           </>
         )}
         
