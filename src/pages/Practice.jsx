@@ -57,7 +57,9 @@ export default function Practice() {
   const questions = practiceSet.questions;
   const currentQ = questions[currentIndex];
   
-  const targetKana = currentQ && currentQ.kana ? currentQ.kana.trim().replace(/[-—―－]/g, 'ー') : '';
+  const targetKana = currentQ && currentQ.kana 
+    ? wanakana.toHiragana(currentQ.kana.trim().replace(/[-—―－_]/g, 'ー')) 
+    : '';
   const romajiVariants = currentQ ? generateRomajiVariants(targetKana) : [];
 
   useEffect(() => {
