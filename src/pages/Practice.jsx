@@ -57,6 +57,10 @@ export default function Practice() {
   const [isFinished, setIsFinished] = useState(false);
   const [errorAnimation, setErrorAnimation] = useState(false);
   const [errorCount, setErrorCount] = useState(0);
+  const [questions] = useState(() => {
+    if (!practiceSet) return [];
+    return [...practiceSet.questions].sort(() => Math.random() - 0.5);
+  });
 
   const showHint = errorCount >= 3;
 
@@ -70,7 +74,6 @@ export default function Practice() {
   }
 
   const title = practiceSet.title;
-  const questions = practiceSet.questions;
   const currentQ = questions[currentIndex];
   
   const targetKana = currentQ && currentQ.kana 
