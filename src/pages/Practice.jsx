@@ -81,7 +81,8 @@ export default function Practice() {
         .replace(/[-—―－_]/g, 'ー')
         .replace(/[\u30a1-\u30f6]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60))
     : '';
-  const romajiVariants = currentQ ? generateRomajiVariants(targetKana) : [];
+  const removePunctuation = (str) => str.replace(/[.,!?、。！？「」『』（）()\s]/g, '');
+  const romajiVariants = currentQ ? generateRomajiVariants(removePunctuation(targetKana)) : [];
 
   useEffect(() => {
     if (inputRef.current && !isFinished) {
@@ -107,10 +108,10 @@ export default function Practice() {
     // 將輸入的字串全部轉為羅馬拼音，以解決半形英文與平假名混合時的比對問題
     const rawRomaji = wanakana.toRomaji(rawValLower);
     
-    // 統一將所有形式的減號與長音符號視為相同 (比對專用)
+    // 統一將所有形式的減號與長音符號視為相同，並過濾掉標點符號 (比對專用)
     const normalizeDash = (str) => str.replace(/[-—―－_~〜]/g, 'ー');
-    const cleanTargetKana = normalizeDash(targetKana);
-    const cleanValKana = normalizeDash(valKana);
+    const cleanTargetKana = removePunctuation(normalizeDash(targetKana));
+    const cleanValKana = removePunctuation(normalizeDash(valKana));
     
     // 檢查是否符合平假名前綴 (日文鍵盤輸入)
     const isKanaPrefix = cleanTargetKana.startsWith(cleanValKana);
@@ -151,10 +152,10 @@ export default function Practice() {
       });
       const rawRomaji = wanakana.toRomaji(typedText.trim());
       
-      // 統一將所有形式的減號與長音符號視為相同 (比對專用)
+      // 統一將所有形式的減號與長音符號視為相同，並過濾掉標點符號 (比對專用)
       const normalizeDash = (str) => str.replace(/[-—―－_~〜]/g, 'ー');
-      const cleanTargetKana = normalizeDash(targetKana);
-      const cleanValKana = normalizeDash(valKana);
+      const cleanTargetKana = removePunctuation(normalizeDash(targetKana));
+      const cleanValKana = removePunctuation(normalizeDash(valKana));
       
       // 只有在輸入完全正確時，按 Enter 才會跳到下一題
       if (cleanValKana === cleanTargetKana || romajiVariants.includes(rawRomaji)) {
